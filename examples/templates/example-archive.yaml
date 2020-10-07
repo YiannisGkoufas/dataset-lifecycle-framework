@@ -1,0 +1,8 @@
+apiVersion: com.ie.ibm.hpsys/v1alpha1
+kind: Dataset
+metadata:
+  name: example-dataset
+spec:
+  type: "ARCHIVE"
+  url: "https://ftp.osuosl.org/pub/blfs/conglomeration/cmake/cmake-2.8.3.tar.gz"
+  format: "tar"

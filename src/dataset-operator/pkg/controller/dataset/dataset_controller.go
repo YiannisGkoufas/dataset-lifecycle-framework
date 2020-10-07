@@ -125,6 +125,7 @@ func (r *ReconcileDataset) Reconcile(request reconcile.Request) (reconcile.Resul
 	} else if(err!=nil && errors.IsNotFound(err)){
 			//1-1 Dataset and DatasetInternal because there is no caching plugin
 			reqLogger.Info("1-1 Dataset and DatasetInternal because there is no caching plugin")
+
 			newDatasetInternalInstance := &comv1alpha1.DatasetInternal{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:                       datasetInstance.ObjectMeta.Name,
@@ -132,6 +133,19 @@ func (r *ReconcileDataset) Reconcile(request reconcile.Request) (reconcile.Resul
 				},
 				Spec:       datasetInstance.Spec,
 			}
+
+			if(len(datasetInstance.Spec.Type) > 0 && datasetInstance.Spec.Type == "ARCHIVE") {
+				podDownloadJob := getPodDataDownload(datasetInstance,os.Getenv("OPERATOR_NAMESPACE"))
+				err = r.client.Create(context.TODO(),podDownloadJob)
+				if(err!=nil){
+					reqLogger.Error(err,"Error while creating pod download")
+					return reconcile.Result{},err
+				}
+				if err := controllerutil.SetControllerReference(datasetInstance, newDatasetInternalInstance, r.scheme); err != nil {
+					return reconcile.Result{}, err
+				}
+			}
+
 			if err := controllerutil.SetControllerReference(datasetInstance, newDatasetInternalInstance, r.scheme); err != nil {
 				return reconcile.Result{}, err
 			}

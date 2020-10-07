@@ -16,6 +16,10 @@ type DatasetSpec struct {
 	// Conf map[string]string `json:"conf,omitempty"`
 	Local  map[string]string `json:"local,omitempty"`
 	Remote map[string]string `json:"remote,omitempty"`
+	// TODO temp definition for archive
+	Type string `json:"type,omitempty"`
+	Url string `json:"url,omitempty"`
+	Format string `json:"format,omitempty"`
 }
 
 // DatasetStatus defines the observed state of Dataset

@@ -457,6 +457,9 @@ rules:
     - mutatingwebhookconfigurations
   verbs:
     - '*'
+- apiGroups: ["batch", "extensions"]
+  resources: ["jobs"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 ---
 # Source: dlf-chart/charts/csi-nfs-chart/templates/csi-attacher-rbac.yaml
 kind: ClusterRoleBinding
@@ -818,6 +821,7 @@ spec:
     spec:
       serviceAccountName: csi-s3
       hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       containers:
         - name: driver-registrar
           image: "quay.io/k8scsi/csi-node-driver-registrar:v2.0.1"
@@ -951,7 +955,7 @@ spec:
       containers:
         - name: dataset-operator
           # Replace this with the built image name
-          image: "yiannisgkoufas/dataset-operator:latest-amd64"
+          image: "yiannisgkoufas/dataset-operator:archive-amd64"
           command:
             - dataset-operator
           imagePullPolicy: Always

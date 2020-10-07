@@ -1,2 +1,2 @@
 container:
-	docker build -t $(IMAGE_TAG) . --build-arg=ARCH=$(ARCH)
+	docker build --network=host -t $(IMAGE_TAG) . --build-arg=ARCH=$(ARCH)
