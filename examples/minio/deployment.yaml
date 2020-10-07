@@ -20,20 +20,8 @@ spec:
       # Volumes used by this deployment
       volumes:
         - name: data
-          emptyDir: {}
-        - name: dummy-data
-          configMap:
-            name: dummy-data
-      initContainers:
-        - name: prepopulate
-          image: busybox
-          command: [ "/bin/sh","-c" ]
-          args: [ "mkdir /data/bucket; cp /dummy/* /data/bucket/;" ]
-          volumeMounts:
-            - name: data
-              mountPath: "/data"
-            - name: dummy-data
-              mountPath: "/dummy"
+          persistentVolumeClaim:
+            claimName: csi-pvc
       containers:
         - name: minio
           # Volume mounts for this container
