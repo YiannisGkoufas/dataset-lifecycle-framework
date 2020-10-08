@@ -5,4 +5,4 @@ metadata:
 spec:
   type: "ARCHIVE"
   url: "https://ftp.osuosl.org/pub/blfs/conglomeration/cmake/cmake-2.8.3.tar.gz"
-  format: "tar"
+  format: "application/x-tar"
