@@ -17,16 +17,26 @@ global:
         image: "csi-provisioner"
         tag: "v2.0.2"
 
+# If you disable this, the CSI plugins won't work!
+csi-sidecars-rbac:
+  enabled: true
+
+
+csi-hostpath-chart:
+  enabled: true
+
 csi-s3-chart:
+  enabled: true
 # baseRepo: "anotherrepo"
 # dockerRegistrySecret: "anothersecret"
 # mounter: "goofys"
   csis3:
     image: "csi-s3"
-    tag: "dev-full"
+    tag: "archive"
   sidecars: {} # in case you want to force override regardless of the csi-s3-chart/values.yaml
 
 csi-nfs-chart:
+  enabled: true
 # baseRepo: "anotherrepo"
 # dockerRegistrySecret: "anothersecret"
   csinfs:
@@ -35,6 +45,7 @@ csi-nfs-chart:
   sidecars: {} # in case you want to force override regardless of the csi-nfs-chart/values.yaml
 
 dataset-operator-chart:
+  enabled: true
 # baseRepo: "anotherrepo"
 # dockerRegistrySecret: "anothersecret"
   generatekeys:

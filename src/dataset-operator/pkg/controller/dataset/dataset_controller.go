@@ -135,14 +135,23 @@ func (r *ReconcileDataset) Reconcile(request reconcile.Request) (reconcile.Resul
 			}
 
 			if(len(datasetInstance.Spec.Type) > 0 && datasetInstance.Spec.Type == "ARCHIVE") {
-				podDownloadJob := getPodDataDownload(datasetInstance,os.Getenv("OPERATOR_NAMESPACE"))
+				podDownloadJob,bucket := getPodDataDownload(datasetInstance,os.Getenv("OPERATOR_NAMESPACE"))
 				err = r.client.Create(context.TODO(),podDownloadJob)
 				if(err!=nil){
 					reqLogger.Error(err,"Error while creating pod download")
 					return reconcile.Result{},err
 				}
-				if err := controllerutil.SetControllerReference(datasetInstance, newDatasetInternalInstance, r.scheme); err != nil {
-					return reconcile.Result{}, err
+				//TODO obviously we need to obtain the keys
+				newDatasetInternalInstance.Spec = comv1alpha1.DatasetSpec{
+					Local: map[string]string{
+						"type": "COS",
+						"accessKeyID": "minio",
+						"secretAccessKey": "minio123",
+						"endpoint": "http://minio-service:9000",
+						"readonly": "true",
+						"bucket": bucket,
+						"region": "",
+					},
 				}
 			}
 

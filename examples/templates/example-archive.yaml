@@ -4,5 +4,5 @@ metadata:
   name: example-dataset
 spec:
   type: "ARCHIVE"
-  url: "https://ftp.osuosl.org/pub/blfs/conglomeration/cmake/cmake-2.8.3.tar.gz"
+  url: "https://dax-cdn.cdn.appdomain.cloud/dax-noaa-weather-data-jfk-airport/1.1.4/noaa-weather-data-jfk-airport.tar.gz"
   format: "application/x-tar"

@@ -29,7 +29,16 @@ metadata:
     app.kubernetes.io/name: "dlf"
   namespace: dlf
 ---
-# Source: dlf-chart/charts/csi-s3-chart/templates/attacher-rbac.yaml
+# Source: dlf-chart/charts/csi-s3-chart/templates/csi-s3.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: csi-s3
+  labels:
+    app.kubernetes.io/name: "dlf"
+  namespace: dlf
+---
+# Source: dlf-chart/charts/csi-sidecars-rbac/templates/attacher-rbac.yaml
 # This YAML file contains all RBAC objects that are necessary to run external
 # CSI attacher.
 #
@@ -49,16 +58,7 @@ metadata:
   labels:
     app.kubernetes.io/name: "dlf"
 ---
-# Source: dlf-chart/charts/csi-s3-chart/templates/csi-s3.yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: csi-s3
-  labels:
-    app.kubernetes.io/name: "dlf"
-  namespace: dlf
----
-# Source: dlf-chart/charts/csi-s3-chart/templates/provisioner-rbac.yaml
+# Source: dlf-chart/charts/csi-sidecars-rbac/templates/provisioner-rbac.yaml
 # This YAML file contains all RBAC objects that are necessary to run external
 # CSI provisioner.
 #
@@ -87,6 +87,19 @@ metadata:
     app.kubernetes.io/name: "dlf"
   namespace: dlf
 ---
+# Source: dlf-chart/charts/csi-hostpath-chart/templates/csi-hostpath-storageclass.yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: csi-hostpath-sc
+  namespace: dlf
+  labels:
+    app.kubernetes.io/name: "dlf"
+provisioner: hostpath.csi.k8s.io
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+allowVolumeExpansion: false
+---
 # Source: dlf-chart/charts/csi-s3-chart/templates/storageclass.yaml
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
@@ -112,6 +125,22 @@ parameters:
 
   csi.storage.k8s.io/node-publish-secret-name: ${pvc.name}
   csi.storage.k8s.io/node-publish-secret-namespace: ${pvc.namespace}
+---
+# Source: dlf-chart/charts/csi-hostpath-chart/templates/csi-pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  namespace: dlf
+  name: minio-pvc
+  labels:
+    app.kubernetes.io/name: "dlf"
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: csi-hostpath-sc # defined in csi-storageclass.yaml
 ---
 # Source: dlf-chart/charts/dataset-operator-chart/templates/crds/com.ie.ibm.hpsys_datasetinternals_crd.yaml
 apiVersion: apiextensions.k8s.io/v1beta1
@@ -273,7 +302,32 @@ rules:
     resources: ["volumeattachments"]
     verbs: ["get", "list", "watch", "update"]
 ---
-# Source: dlf-chart/charts/csi-s3-chart/templates/attacher-rbac.yaml
+# Source: dlf-chart/charts/csi-s3-chart/templates/csi-s3.yaml
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: csi-s3
+  labels:
+    app.kubernetes.io/name: "dlf"
+  namespace: dlf
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "update"]
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch", "update"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["volumeattachments"]
+    verbs: ["get", "list", "watch", "update","create"]
+---
+# Source: dlf-chart/charts/csi-sidecars-rbac/templates/attacher-rbac.yaml
 # Attacher must be able to work with PVs, CSINodes and VolumeAttachments
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
@@ -302,32 +356,7 @@ rules:
 #    resources: ["secrets"]
 #    verbs: ["get", "list"]
 ---
-# Source: dlf-chart/charts/csi-s3-chart/templates/csi-s3.yaml
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: csi-s3
-  labels:
-    app.kubernetes.io/name: "dlf"
-  namespace: dlf
-rules:
-  - apiGroups: [""]
-    resources: ["secrets"]
-    verbs: ["get", "list"]
-  - apiGroups: [""]
-    resources: ["nodes"]
-    verbs: ["get", "list", "update"]
-  - apiGroups: [""]
-    resources: ["namespaces"]
-    verbs: ["get", "list"]
-  - apiGroups: [""]
-    resources: ["persistentvolumes"]
-    verbs: ["get", "list", "watch", "update"]
-  - apiGroups: ["storage.k8s.io"]
-    resources: ["volumeattachments"]
-    verbs: ["get", "list", "watch", "update","create"]
----
-# Source: dlf-chart/charts/csi-s3-chart/templates/provisioner-rbac.yaml
+# Source: dlf-chart/charts/csi-sidecars-rbac/templates/provisioner-rbac.yaml
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -495,23 +524,6 @@ roleRef:
   name: csi-nodeplugin
   apiGroup: rbac.authorization.k8s.io
 ---
-# Source: dlf-chart/charts/csi-s3-chart/templates/attacher-rbac.yaml
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: csi-attacher-role
-  labels:
-    app.kubernetes.io/name: "dlf"
-subjects:
-  - kind: ServiceAccount
-    name: csi-attacher
-    # replace with non-default namespace name
-    namespace: dlf
-roleRef:
-  kind: ClusterRole
-  name: external-attacher-runner
-  apiGroup: rbac.authorization.k8s.io
----
 # Source: dlf-chart/charts/csi-s3-chart/templates/csi-s3.yaml
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -529,7 +541,24 @@ roleRef:
   name: csi-s3
   apiGroup: rbac.authorization.k8s.io
 ---
-# Source: dlf-chart/charts/csi-s3-chart/templates/provisioner-rbac.yaml
+# Source: dlf-chart/charts/csi-sidecars-rbac/templates/attacher-rbac.yaml
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: csi-attacher-role
+  labels:
+    app.kubernetes.io/name: "dlf"
+subjects:
+  - kind: ServiceAccount
+    name: csi-attacher
+    # replace with non-default namespace name
+    namespace: dlf
+roleRef:
+  kind: ClusterRole
+  name: external-attacher-runner
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: dlf-chart/charts/csi-sidecars-rbac/templates/provisioner-rbac.yaml
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -564,7 +593,7 @@ roleRef:
   name: dataset-operator
   apiGroup: rbac.authorization.k8s.io
 ---
-# Source: dlf-chart/charts/csi-s3-chart/templates/attacher-rbac.yaml
+# Source: dlf-chart/charts/csi-sidecars-rbac/templates/attacher-rbac.yaml
 # Attacher must be able to work with configmaps or leases in the current namespace
 # if (and only if) leadership election is enabled
 kind: Role
@@ -580,7 +609,7 @@ rules:
     resources: ["leases"]
     verbs: ["get", "watch", "list", "delete", "update", "create"]
 ---
-# Source: dlf-chart/charts/csi-s3-chart/templates/provisioner-rbac.yaml
+# Source: dlf-chart/charts/csi-sidecars-rbac/templates/provisioner-rbac.yaml
 # Provisioner must be able to work with endpoints in current namespace
 # if (and only if) leadership election is enabled
 kind: Role
@@ -616,7 +645,7 @@ rules:
     resources: ["replicasets"]
     verbs: ["get"]
 ---
-# Source: dlf-chart/charts/csi-s3-chart/templates/attacher-rbac.yaml
+# Source: dlf-chart/charts/csi-sidecars-rbac/templates/attacher-rbac.yaml
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -635,7 +664,7 @@ roleRef:
   name: external-attacher-cfg
   apiGroup: rbac.authorization.k8s.io
 ---
-# Source: dlf-chart/charts/csi-s3-chart/templates/provisioner-rbac.yaml
+# Source: dlf-chart/charts/csi-sidecars-rbac/templates/provisioner-rbac.yaml
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -653,6 +682,27 @@ roleRef:
   kind: Role
   name: external-provisioner-cfg
   apiGroup: rbac.authorization.k8s.io
+---
+# Source: dlf-chart/charts/csi-hostpath-chart/templates/csi-hostpath-plugin.yaml
+# Service defined here, plus serviceName below in StatefulSet,
+# are needed only because of condition explained in
+# https://github.com/kubernetes/kubernetes/issues/69608
+# TODO make it templated
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: csi-hostpathplugin
+  namespace: dlf
+  labels:
+    app: csi-hostpathplugin
+    app.kubernetes.io/name: "dlf"
+spec:
+  selector:
+    app: csi-hostpathplugin
+  ports:
+    - name: dummy
+      port: 12345
 ---
 # Source: dlf-chart/charts/csi-nfs-chart/templates/csi-attacher-nfsplugin.yaml
 # This YAML file contains attacher & csi driver API objects that are necessary
@@ -849,7 +899,7 @@ spec:
             - mountPath: /csi-data-dir
               name: csi-data-dir
         - name: csi-s3
-          image: "yiannisgkoufas/csi-s3:dev-full-amd64"
+          image: "yiannisgkoufas/csi-s3:archive-amd64"
           imagePullPolicy: Always
           args:
             - "--v=5"
@@ -983,6 +1033,240 @@ spec:
         - name: webhook-tls-certs
           secret:
             secretName: webhook-server-tls
+---
+# Source: dlf-chart/charts/csi-hostpath-chart/templates/csi-hostpath-attacher.yaml
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: csi-hostpath-attacher
+  namespace: dlf
+  labels:
+    app.kubernetes.io/name: "dlf"
+spec:
+  serviceName: "csi-hostpath-attacher"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: csi-hostpath-attacher
+  template:
+    metadata:
+      labels:
+        app: csi-hostpath-attacher
+    spec:
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - csi-hostpathplugin
+            topologyKey: kubernetes.io/hostname
+      serviceAccountName: csi-attacher
+      containers:
+        - name: csi-attacher
+          image: "quay.io/k8scsi/csi-attacher:v3.0.0"
+          imagePullPolicy: Always
+          args:
+            - --v=5
+            - --csi-address=/csi/csi.sock
+          securityContext:
+            # This is necessary only for systems with SELinux, where
+            # non-privileged sidecar containers cannot access unix domain socket
+            # created by privileged CSI driver container.
+            privileged: true
+          volumeMounts:
+          - mountPath: /csi
+            name: socket-dir
+
+      volumes:
+        - hostPath:
+            path:  /var/lib/kubelet/plugins/csi-hostpath
+            type: DirectoryOrCreate
+          name: socket-dir
+---
+# Source: dlf-chart/charts/csi-hostpath-chart/templates/csi-hostpath-plugin.yaml
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: csi-hostpathplugin
+  namespace: dlf
+  labels:
+    app.kubernetes.io/name: "dlf"
+spec:
+  serviceName: "csi-hostpathplugin"
+  # One replica only:
+  # Host path driver only works when everything runs
+  # on a single node. We achieve that by starting it once and then
+  # co-locate all other pods via inter-pod affinity
+  replicas: 1
+  selector:
+    matchLabels:
+      app: csi-hostpathplugin
+  template:
+    metadata:
+      labels:
+        app: csi-hostpathplugin
+        app.kubernetes.io/name: "dlf"
+    spec:
+      containers:
+        - name: node-driver-registrar
+          image: k8s.gcr.io/sig-storage/csi-node-driver-registrar:v2.0.1
+          args:
+            - --v=5
+            - --csi-address=/csi/csi.sock
+            - --kubelet-registration-path=/var/lib/kubelet/plugins/csi-hostpath/csi.sock
+          securityContext:
+            # This is necessary only for systems with SELinux, where
+            # non-privileged sidecar containers cannot access unix domain socket
+            # created by privileged CSI driver container.
+            privileged: true
+          env:
+            - name: KUBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
+          volumeMounts:
+          - mountPath: /csi
+            name: socket-dir
+          - mountPath: /registration
+            name: registration-dir
+          - mountPath: /csi-data-dir
+            name: csi-data-dir
+
+        - name: hostpath
+          image: k8s.gcr.io/sig-storage/hostpathplugin:v1.4.0
+          args:
+            - "--drivername=hostpath.csi.k8s.io"
+            - "--v=5"
+            - "--endpoint=$(CSI_ENDPOINT)"
+            - "--nodeid=$(KUBE_NODE_NAME)"
+          env:
+            - name: CSI_ENDPOINT
+              value: unix:///csi/csi.sock
+            - name: KUBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
+          securityContext:
+            privileged: true
+          ports:
+          - containerPort: 9898
+            name: healthz
+            protocol: TCP
+          livenessProbe:
+            failureThreshold: 5
+            httpGet:
+              path: /healthz
+              port: healthz
+            initialDelaySeconds: 10
+            timeoutSeconds: 3
+            periodSeconds: 2
+          volumeMounts:
+            - mountPath: /csi
+              name: socket-dir
+            - mountPath: /var/lib/kubelet/pods
+              mountPropagation: Bidirectional
+              name: mountpoint-dir
+            - mountPath: /var/lib/kubelet/plugins
+              mountPropagation: Bidirectional
+              name: plugins-dir
+            - mountPath: /csi-data-dir
+              name: csi-data-dir
+            - mountPath: /dev
+              name: dev-dir
+        - name: liveness-probe
+          volumeMounts:
+          - mountPath: /csi
+            name: socket-dir
+          image: k8s.gcr.io/sig-storage/livenessprobe:v2.1.0
+          args:
+          - --csi-address=/csi/csi.sock
+          - --health-port=9898
+
+      volumes:
+        - hostPath:
+            path: /var/lib/kubelet/plugins/csi-hostpath
+            type: DirectoryOrCreate
+          name: socket-dir
+        - hostPath:
+            path: /var/lib/kubelet/pods
+            type: DirectoryOrCreate
+          name: mountpoint-dir
+        - hostPath:
+            path: /var/lib/kubelet/plugins_registry
+            type: Directory
+          name: registration-dir
+        - hostPath:
+            path: /var/lib/kubelet/plugins
+            type: Directory
+          name: plugins-dir
+        - hostPath:
+            # 'path' is where PV data is persisted on host.
+            # using /tmp is also possible while the PVs will not available after plugin container recreation or host reboot
+            path: /var/lib/csi-hostpath-data/
+            type: DirectoryOrCreate
+          name: csi-data-dir
+        - hostPath:
+            path: /dev
+            type: Directory
+          name: dev-dir
+---
+# Source: dlf-chart/charts/csi-hostpath-chart/templates/csi-hostpath-provisioner.yaml
+#TODO make it templated
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: csi-hostpath-provisioner
+  namespace: dlf
+  labels:
+    app.kubernetes.io/name: "dlf"
+spec:
+  serviceName: "csi-hostpath-provisioner"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: csi-hostpath-provisioner
+  template:
+    metadata:
+      labels:
+        app: csi-hostpath-provisioner
+        app.kubernetes.io/name: "dlf"
+    spec:
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - csi-hostpathplugin
+            topologyKey: kubernetes.io/hostname
+      serviceAccountName: csi-provisioner
+      containers:
+        - name: csi-provisioner
+          image: k8s.gcr.io/sig-storage/csi-provisioner:v2.0.2
+          args:
+            - -v=5
+            - --csi-address=/csi/csi.sock
+            - --feature-gates=Topology=true
+          securityContext:
+            # This is necessary only for systems with SELinux, where
+            # non-privileged sidecar containers cannot access unix domain socket
+            # created by privileged CSI driver container.
+            privileged: true
+          volumeMounts:
+            - mountPath: /csi
+              name: socket-dir
+      volumes:
+        - hostPath:
+            path: /var/lib/kubelet/plugins/csi-hostpath
+            type: DirectoryOrCreate
+          name: socket-dir
 ---
 # Source: dlf-chart/charts/csi-nfs-chart/templates/csi-attacher-nfsplugin.yaml
 kind: StatefulSet
@@ -1149,3 +1433,20 @@ spec:
               value: dlf
       restartPolicy: Never
   backoffLimit: 4
+---
+# Source: dlf-chart/charts/csi-hostpath-chart/templates/csi-hostpath-driverinfo.yaml
+apiVersion: storage.k8s.io/v1beta1
+kind: CSIDriver
+metadata:
+  name: hostpath.csi.k8s.io
+  namespace: dlf
+  labels:
+    app.kubernetes.io/name: "dlf"
+spec:
+  # Supports persistent and ephemeral inline volumes.
+  volumeLifecycleModes:
+  - Persistent
+  - Ephemeral
+  # To determine at runtime which mode a volume uses, pod info and its
+  # "csi.storage.k8s.io/ephemeral" entry are needed.
+  podInfoOnMount: true

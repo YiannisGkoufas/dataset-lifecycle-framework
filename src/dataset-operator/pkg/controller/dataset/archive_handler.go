@@ -9,12 +9,12 @@ import (
 	"path"
 )
 
-func getPodDataDownload(dataset *comv1alpha1.Dataset, operatorNamespace string) *batchv1.Job {
+func getPodDataDownload(dataset *comv1alpha1.Dataset, operatorNamespace string) (*batchv1.Job,string) {
 	uuid_forpod, _ := uuid.NewUUID()
 	podId := uuid_forpod.String()
 	fileUrl := dataset.Spec.Url
 	fileName := path.Base(fileUrl)
-	seconds := int32(60)
+	seconds := int32(1)
 	podSpec := corev1.PodSpec{
 		Volumes: []corev1.Volume{
 			{Name: "minio-pvc", VolumeSource: corev1.VolumeSource{
@@ -27,7 +27,7 @@ func getPodDataDownload(dataset *comv1alpha1.Dataset, operatorNamespace string) 
 			Image: "busybox",
 			Name:  "busybox",
 			Command: []string{
-				"/bin/sh", "-c", "mkdir /data/" + podId + " && wget " + fileUrl + " -P" + " /tmp && " + "tar " + "-xf " + "/tmp/" + fileName + " -C /data/" + podId + " && rm -rf /tmp/" + fileName,
+				"/bin/sh", "-c", "mkdir -p /data/" + podId + " && wget " + fileUrl + " -P" + " /tmp && " + "tar " + "-xf " + "/tmp/" + fileName + " -C /data/" + podId + " && rm -rf /tmp/" + fileName,
 			},
 			VolumeMounts: []corev1.VolumeMount{
 				{Name: "minio-pvc", MountPath: "/data"},
@@ -37,15 +37,16 @@ func getPodDataDownload(dataset *comv1alpha1.Dataset, operatorNamespace string) 
 	}
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      podId,
+			Name:      "download-"+podId[:4],
 			Namespace: operatorNamespace,
 		},
 		Spec: batchv1.JobSpec{
+			BackoffLimit: &seconds,
 			Template: corev1.PodTemplateSpec{
 				Spec: podSpec,
 			},
 			TTLSecondsAfterFinished: &seconds,
 		},
 	}
-	return job
+	return job, podId
 }
