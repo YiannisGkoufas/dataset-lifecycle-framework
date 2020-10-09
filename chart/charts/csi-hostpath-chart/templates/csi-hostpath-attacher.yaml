@@ -1,7 +1,11 @@
+{{- $csiHostpathProperties := merge .Values $.Values.global}}
 kind: StatefulSet
 apiVersion: apps/v1
 metadata:
   name: csi-hostpath-attacher
+  namespace: {{ .Release.Namespace }}
+  labels:
+  {{- include "common.labels" . | nindent 4 }}
 spec:
   serviceName: "csi-hostpath-attacher"
   replicas: 1
@@ -24,9 +28,16 @@ spec:
                 - csi-hostpathplugin
             topologyKey: kubernetes.io/hostname
       serviceAccountName: csi-attacher
+      {{- if or (.Values.dockerRegistrySecret) (.Values.global.dockerRegistrySecret) }}
+      imagePullSecrets:
+        - name: {{ .Values.dockerRegistrySecret | default .Values.global.dockerRegistrySecret }}
+      {{- end}}
       containers:
         - name: csi-attacher
-          image: k8s.gcr.io/sig-storage/csi-attacher:v3.0.0
+          {{- with $csiHostpathProperties.sidecars}}
+          image: "{{ .baseRepo }}/{{ .images.externalAttacher.image }}:{{ .images.externalAttacher.tag }}"
+          {{- end}}
+          imagePullPolicy: Always
           args:
             - --v=5
             - --csi-address=/csi/csi.sock
@@ -41,6 +52,6 @@ spec:
 
       volumes:
         - hostPath:
-            path: /var/lib/kubelet/plugins/csi-hostpath
+            path:  {{ $csiHostpathProperties.sidecars.kubeletPath }}/plugins/csi-hostpath
             type: DirectoryOrCreate
           name: socket-dir

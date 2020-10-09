@@ -1,7 +1,11 @@
+#TODO make it templated
 kind: StatefulSet
 apiVersion: apps/v1
 metadata:
   name: csi-hostpath-provisioner
+  namespace: {{ .Release.Namespace }}
+  labels:
+  {{- include "common.labels" . | nindent 4 }}
 spec:
   serviceName: "csi-hostpath-provisioner"
   replicas: 1
@@ -12,6 +16,7 @@ spec:
     metadata:
       labels:
         app: csi-hostpath-provisioner
+    {{- include "common.labels" . | nindent 8 }}
     spec:
       affinity:
         podAffinity:

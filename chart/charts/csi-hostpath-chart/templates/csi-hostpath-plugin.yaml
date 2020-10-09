@@ -1,13 +1,16 @@
 # Service defined here, plus serviceName below in StatefulSet,
 # are needed only because of condition explained in
 # https://github.com/kubernetes/kubernetes/issues/69608
+# TODO make it templated
 
 kind: Service
 apiVersion: v1
 metadata:
   name: csi-hostpathplugin
+  namespace: {{ .Release.Namespace }}
   labels:
     app: csi-hostpathplugin
+  {{- include "common.labels" . | nindent 4 }}
 spec:
   selector:
     app: csi-hostpathplugin
@@ -19,6 +22,9 @@ kind: StatefulSet
 apiVersion: apps/v1
 metadata:
   name: csi-hostpathplugin
+  namespace: {{ .Release.Namespace }}
+  labels:
+  {{- include "common.labels" . | nindent 4 }}
 spec:
   serviceName: "csi-hostpathplugin"
   # One replica only:
@@ -33,6 +39,7 @@ spec:
     metadata:
       labels:
         app: csi-hostpathplugin
+    {{- include "common.labels" . | nindent 8 }}
     spec:
       containers:
         - name: node-driver-registrar

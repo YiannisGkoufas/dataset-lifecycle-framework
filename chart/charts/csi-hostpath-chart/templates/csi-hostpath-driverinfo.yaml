@@ -2,6 +2,9 @@ apiVersion: storage.k8s.io/v1beta1
 kind: CSIDriver
 metadata:
   name: hostpath.csi.k8s.io
+  namespace: {{ .Release.Namespace }}
+  labels:
+  {{- include "common.labels" . | nindent 4 }}
 spec:
   # Supports persistent and ephemeral inline volumes.
   volumeLifecycleModes:
